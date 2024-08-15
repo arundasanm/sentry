@@ -6,6 +6,7 @@ from sentry.models.organizationmember import OrganizationMember
 from sentry.notifications.notifications.organization_request.integration_request import (
     IntegrationRequestNotification,
 )
+from sentry.types.actor import Actor
 from sentry.users.models.user import User
 
 from .mail import render_preview_email_for_notification
@@ -15,7 +16,7 @@ class DebugOrganizationIntegrationRequestEmailView(View):
     def get(self, request: HttpRequest) -> HttpResponse:
         org = Organization(id=1, slug="default", name="Default")
         requester = User(name="Rick Swan")
-        recipient = User(name="James Bond")
+        recipient = Actor.from_orm_user(User(name="James Bond"))
         recipient_member = OrganizationMember(user_id=recipient.id, organization=org)
 
         notification = IntegrationRequestNotification(

@@ -5,6 +5,7 @@ from sentry.incidents.models.incident import Incident, IncidentActivity, Inciden
 from sentry.incidents.tasks import generate_incident_activity_email
 from sentry.models.organization import Organization
 from sentry.users.models.user import User
+from sentry.users.services.user.serial import serialize_rpc_user
 
 from .mail import MailPreview
 
@@ -12,12 +13,15 @@ from .mail import MailPreview
 class DebugIncidentActivityEmailView(View):
     def get(self, request: HttpRequest) -> HttpResponse:
         organization = Organization(slug="myorg")
-        user = User(id=1235, name="Hello There")
+        user = serialize_rpc_user(User(id=1235, name="Hello There"))
         incident = Incident(
             id=2, identifier=123, organization=organization, title="Something broke"
         )
         activity = IncidentActivity(
-            incident=incident, user=user, type=IncidentActivityType.COMMENT.value, comment="hi"
+            incident=incident,
+            user_id=user.id,
+            type=IncidentActivityType.COMMENT.value,
+            comment="hi",
         )
         email = generate_incident_activity_email(activity, user)
         return MailPreview(
