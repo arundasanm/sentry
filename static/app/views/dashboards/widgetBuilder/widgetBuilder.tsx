@@ -1,5 +1,4 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
-import type {RouteComponentProps} from 'react-router';
 import styled from '@emotion/styled';
 import cloneDeep from 'lodash/cloneDeep';
 import omit from 'lodash/omit';
@@ -22,6 +21,7 @@ import {t} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
 import type {DateString, PageFilters} from 'sentry/types/core';
 import type {TagCollection} from 'sentry/types/group';
+import type {RouteComponentProps} from 'sentry/types/legacyReactRouter';
 import type {Organization} from 'sentry/types/organization';
 import {defined} from 'sentry/utils';
 import {trackAnalytics} from 'sentry/utils/analytics';

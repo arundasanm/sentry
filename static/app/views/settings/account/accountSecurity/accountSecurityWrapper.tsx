@@ -1,11 +1,11 @@
 import {cloneElement} from 'react';
-import type {RouteComponentProps} from 'react-router';
 
 import {addErrorMessage} from 'sentry/actionCreators/indicator';
 import {fetchOrganizations} from 'sentry/actionCreators/organizations';
 import DeprecatedAsyncComponent from 'sentry/components/deprecatedAsyncComponent';
 import {t} from 'sentry/locale';
 import type {Authenticator} from 'sentry/types/auth';
+import type {RouteComponentProps} from 'sentry/types/legacyReactRouter';
 import type {OrganizationSummary} from 'sentry/types/organization';
 import type {UserEmail} from 'sentry/types/user';
 import {defined} from 'sentry/utils';
