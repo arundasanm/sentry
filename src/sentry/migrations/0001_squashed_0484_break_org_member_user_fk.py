@@ -4703,6 +4703,12 @@ class Migration(CheckedMigration):
             ],
             options={
                 "db_table": "sentry_incident",
+                "indexes": [
+                    models.Index(
+                        fields=["alert_rule", "type", "status"],
+                        name="sentry_inci_alert_r_24a457_idx",
+                    ),
+                ],
             },
         ),
         migrations.CreateModel(
@@ -5241,10 +5247,6 @@ class Migration(CheckedMigration):
         migrations.AlterUniqueTogether(
             name="incident",
             unique_together={("organization", "identifier")},
-        ),
-        migrations.AlterIndexTogether(
-            name="incident",
-            index_together={("alert_rule", "type", "status")},
         ),
         migrations.CreateModel(
             name="AlertRuleTriggerExclusion",
