@@ -47,10 +47,10 @@ class Migration(CheckedMigration):
                 ),
                 migrations.RunSQL(
                     """
-                    ALTER TABLE "uptime_uptimesubscription" ADD COLUMN "host_whois_orgid" character varying(255) NOT NULL DEFAULT '';
+                    ALTER TABLE "uptime_uptimesubscription" ADD COLUMN "host_whois_orgname" character varying(255) NOT NULL DEFAULT '';
                     """,
                     reverse_sql="""
-                ALTER TABLE "uptime_uptimesubscription" DROP COLUMN "host_whois_orgid";
+                ALTER TABLE "uptime_uptimesubscription" DROP COLUMN "host_whois_orgname";
                 """,
                     hints={"tables": ["uptime_uptimesubscription"]},
                 ),
