@@ -45,6 +45,24 @@ class Migration(CheckedMigration):
                 """,
                     hints={"tables": ["uptime_uptimesubscription"]},
                 ),
+                migrations.RunSQL(
+                    """
+                    ALTER TABLE "uptime_uptimesubscription" ADD COLUMN "host_whois_orgid" character varying(255) NOT NULL DEFAULT '';
+                    """,
+                    reverse_sql="""
+                ALTER TABLE "uptime_uptimesubscription" DROP COLUMN "host_whois_orgid";
+                """,
+                    hints={"tables": ["uptime_uptimesubscription"]},
+                ),
+                migrations.RunSQL(
+                    """
+                    ALTER TABLE "uptime_uptimesubscription" ADD COLUMN "host_whois_orgid" character varying(255) NOT NULL DEFAULT '';
+                    """,
+                    reverse_sql="""
+                ALTER TABLE "uptime_uptimesubscription" DROP COLUMN "host_whois_orgid";
+                """,
+                    hints={"tables": ["uptime_uptimesubscription"]},
+                ),
             ],
             state_operations=[
                 migrations.AddField(
@@ -55,6 +73,16 @@ class Migration(CheckedMigration):
                 migrations.AddField(
                     model_name="uptimesubscription",
                     name="url_suffix",
+                    field=models.CharField(db_index=True, default="", max_length=255),
+                ),
+                migrations.AddField(
+                    model_name="uptimesubscription",
+                    name="host_whois_orgname",
+                    field=models.CharField(db_index=True, default="", max_length=255),
+                ),
+                migrations.AddField(
+                    model_name="uptimesubscription",
+                    name="host_whois_orgid",
                     field=models.CharField(db_index=True, default="", max_length=255),
                 ),
             ],

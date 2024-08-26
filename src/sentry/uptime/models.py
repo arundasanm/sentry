@@ -28,6 +28,10 @@ class UptimeSubscription(BaseRemoteSubscription, DefaultFieldsModel):
     url_domain = models.CharField(max_length=255, db_index=True, default="")
     # The suffix of the url, extracted via TLDExtract
     url_suffix = models.CharField(max_length=255, db_index=True, default="")
+    # Org name of the host of the url
+    host_whois_orgname = models.CharField(max_length=255, db_index=True, default="")
+    # Org name of the host of the url
+    host_whois_orgid = models.CharField(max_length=255, db_index=True, default="")
     # How frequently to run the check in seconds
     interval_seconds = models.IntegerField()
     # How long to wait for a response from the url before we assume a timeout
