@@ -1,6 +1,6 @@
 import 'intersection-observer'; // polyfill
 
-import {useContext,useState} from 'react';
+import {useContext, useState} from 'react';
 import styled from '@emotion/styled';
 import type {Node} from '@react-types/shared';
 
