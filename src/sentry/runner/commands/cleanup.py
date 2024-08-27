@@ -173,10 +173,14 @@ def cleanup(
         start_time = None
         if timed:
             start_time = time.time()
-        transaction = sentry_sdk.start_transaction(op="cleanup", name="cleanup")
-        transaction.__enter__()
-        transaction.set_tag("router", router)
-        transaction.set_tag("model", model)
+
+        transaction = None
+        # Making sure we're not running in local dev to prevent a local error
+        if not os.environ.get("SENTRY_DEVENV_HOME"):
+            transaction = sentry_sdk.start_transaction(op="cleanup", name="cleanup")
+            transaction.__enter__()
+            transaction.set_tag("router", router)
+            transaction.set_tag("model", model)
 
         # list of models which this query is restricted to
         model_list = {m.lower() for m in model}
