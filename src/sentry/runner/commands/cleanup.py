@@ -246,7 +246,7 @@ def cleanup(
         if project_deletion_query is not None and len(to_delete_by_project):
             debug_output("Running bulk deletes in DELETES_BY_PROJECT")
             for project_id_for_deletion in RangeQuerySetWrapper(
-                project_deletion_query.values_list("id", flat=True),
+                project_deletion_query.values_list("id", flat=True),  # type: ignore[attr-defined]
                 result_value_getter=lambda item: item,
             ):
                 for model_tp, dtfield, order_by in to_delete_by_project:
@@ -289,7 +289,7 @@ def cleanup(
         transaction.__exit__(None, None, None)
 
 
-def remove_expired_values_for_lost_passwords(is_filtered):
+def remove_expired_values_for_lost_passwords(is_filtered) -> None:
     from sentry.users.models.lostpasswordhash import LostPasswordHash
 
     debug_output("Removing expired values for LostPasswordHash")
@@ -301,7 +301,7 @@ def remove_expired_values_for_lost_passwords(is_filtered):
         ).delete()
 
 
-def remove_expired_values_for_org_members(is_filtered, days):
+def remove_expired_values_for_org_members(is_filtered, days) -> None:
     from sentry.models.organizationmember import OrganizationMember
 
     debug_output("Removing expired values for OrganizationMember")
@@ -312,7 +312,7 @@ def remove_expired_values_for_org_members(is_filtered, days):
         OrganizationMember.objects.delete_expired(expired_threshold)
 
 
-def delete_api_models(is_filtered):
+def delete_api_models(is_filtered) -> None:
     from sentry.models.apigrant import ApiGrant
     from sentry.models.apitoken import ApiToken
 
@@ -336,7 +336,7 @@ def delete_api_models(is_filtered):
             queryset.delete()
 
 
-def exported_data(is_filtered, silent):
+def exported_data(is_filtered, silent) -> None:
     from sentry.data_export.models import ExportedData
 
     if not silent:
@@ -350,7 +350,7 @@ def exported_data(is_filtered, silent):
             item.delete_file()
 
 
-def models_which_use_deletions_code_path():
+def models_which_use_deletions_code_path() -> list:
     from sentry.models.artifactbundle import ArtifactBundle
     from sentry.models.eventattachment import EventAttachment
     from sentry.models.grouprulestatus import GroupRuleStatus
@@ -368,7 +368,7 @@ def models_which_use_deletions_code_path():
     ]
 
 
-def remove_cross_project_models(deletes):
+def remove_cross_project_models(deletes) -> None:
     from sentry.models.artifactbundle import ArtifactBundle
 
     # These models span across projects, so let's skip them
@@ -376,7 +376,7 @@ def remove_cross_project_models(deletes):
     return deletes
 
 
-def get_project_id_or_fail(project):
+def get_project_id_or_fail(project) -> int | None:
     click.echo("Bulk NodeStore deletion not available for project selection", err=True)
     project_id = get_project(project)
     if project_id is None:
@@ -385,7 +385,7 @@ def get_project_id_or_fail(project):
     return project_id
 
 
-def remove_old_nodestore_values(days):
+def remove_old_nodestore_values(days) -> None:
     from sentry import nodestore
 
     debug_output("Removing old NodeStore values")
@@ -397,7 +397,7 @@ def remove_old_nodestore_values(days):
         click.echo("NodeStore backend does not support cleanup operation", err=True)
 
 
-def generate_bulk_query_deletes():
+def generate_bulk_query_deletes() -> list:
     from django.apps import apps
 
     from sentry.models.groupemailthread import GroupEmailThread
@@ -423,7 +423,7 @@ def generate_bulk_query_deletes():
     return BULK_QUERY_DELETES
 
 
-def run_bulk_query_deletes(bulk_query_deletes, is_filtered, days, project, project_id):
+def run_bulk_query_deletes(bulk_query_deletes, is_filtered, days, project, project_id) -> None:
     from sentry.db.deletion import BulkDeleteQuery
 
     debug_output("Running bulk query deletes in bulk_query_deletes")
@@ -443,7 +443,7 @@ def run_bulk_query_deletes(bulk_query_deletes, is_filtered, days, project, proje
             ).execute(chunk_size=chunk_size)
 
 
-def prepare_deletes_by_project(project, project_id, is_filtered):
+def prepare_deletes_by_project(project, project_id, is_filtered) -> tuple[list, list]:
     from sentry import models
     from sentry.constants import ObjectStatus
 
@@ -473,7 +473,7 @@ def prepare_deletes_by_project(project, project_id, is_filtered):
     return project_deletion_query, to_delete_by_project
 
 
-def remove_file_blobs(is_filtered, silent):
+def remove_file_blobs(is_filtered, silent) -> None:
     from sentry.models.file import FileBlob
 
     # Clean up FileBlob instances which are no longer used and aren't super
