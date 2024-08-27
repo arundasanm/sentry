@@ -2692,3 +2692,10 @@ register(
     default=10000,
     flags=FLAG_AUTOMATOR_MODIFIABLE,
 )
+
+register(
+    "grouping.grouphash_metadata.ingestion_writes_enabled",
+    type=Bool,
+    default=True,
+    flags=FLAG_AUTOMATOR_MODIFIABLE,
+)
