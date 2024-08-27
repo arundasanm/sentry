@@ -210,12 +210,12 @@ def cleanup(
         project_id = None
         if SiloMode.get_current_mode() != SiloMode.CONTROL:
             if project:
-                remove_cross_project_models()
+                remove_cross_project_models(deletes)
                 project_id = get_project_id_or_fail(project)
             else:
                 remove_old_nodestore_values(days)
 
-        running_bulk_query_deletes(bulk_query_deletes, is_filtered, days, project, project_id)
+        run_bulk_query_deletes(bulk_query_deletes, is_filtered, days, project, project_id)
 
         debug_output("Running bulk deletes in DELETES")
         for model_tp, dtfield, order_by in deletes:
@@ -416,14 +416,14 @@ def generate_bulk_query_deletes():
     BULK_QUERY_DELETES = [
         (UserReport, "date_added", None),
         (GroupEmailThread, "date", None),
-        (RuleFireHistory, "date_added", None),
         (NotificationMessage, "date_added", None),
+        (RuleFireHistory, "date_added", None),
     ] + additional_bulk_query_deletes
 
     return BULK_QUERY_DELETES
 
 
-def running_bulk_query_deletes(bulk_query_deletes, is_filtered, days, project, project_id):
+def run_bulk_query_deletes(bulk_query_deletes, is_filtered, days, project, project_id):
     from sentry.db.deletion import BulkDeleteQuery
 
     debug_output("Running bulk query deletes in bulk_query_deletes")
