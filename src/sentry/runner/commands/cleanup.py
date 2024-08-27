@@ -2,15 +2,17 @@ from __future__ import annotations
 
 import os
 import time
+from collections.abc import Callable
 from datetime import timedelta
 from multiprocessing import JoinableQueue as Queue
 from multiprocessing import Process
-from typing import Final, Literal, TypeAlias
+from typing import Any, Final, Literal, TypeAlias
 from uuid import uuid4
 
 import click
 import sentry_sdk
 from django.conf import settings
+from django.db.models import Model, QuerySet
 from django.utils import timezone
 
 from sentry.runner.decorators import log_options
@@ -164,7 +166,6 @@ def cleanup(
         configure()
 
         from django.db import router as db_router
-        from django.db.models import Model
 
         from sentry.db.deletion import BulkDeleteQuery
         from sentry.utils import metrics
@@ -246,7 +247,7 @@ def cleanup(
         if project_deletion_query is not None and len(to_delete_by_project):
             debug_output("Running bulk deletes in DELETES_BY_PROJECT")
             for project_id_for_deletion in RangeQuerySetWrapper(
-                project_deletion_query.values_list("id", flat=True),  # type: ignore[attr-defined]
+                project_deletion_query.values_list("id", flat=True),
                 result_value_getter=lambda item: item,
             ):
                 for model_tp, dtfield, order_by in to_delete_by_project:
@@ -289,7 +290,7 @@ def cleanup(
         transaction.__exit__(None, None, None)
 
 
-def remove_expired_values_for_lost_passwords(is_filtered) -> None:
+def remove_expired_values_for_lost_passwords(is_filtered: Callable[[type[Model]], bool]) -> None:
     from sentry.users.models.lostpasswordhash import LostPasswordHash
 
     debug_output("Removing expired values for LostPasswordHash")
@@ -301,7 +302,9 @@ def remove_expired_values_for_lost_passwords(is_filtered) -> None:
         ).delete()
 
 
-def remove_expired_values_for_org_members(is_filtered, days) -> None:
+def remove_expired_values_for_org_members(
+    is_filtered: Callable[[type[Model]], bool], days: int
+) -> None:
     from sentry.models.organizationmember import OrganizationMember
 
     debug_output("Removing expired values for OrganizationMember")
@@ -312,7 +315,7 @@ def remove_expired_values_for_org_members(is_filtered, days) -> None:
         OrganizationMember.objects.delete_expired(expired_threshold)
 
 
-def delete_api_models(is_filtered) -> None:
+def delete_api_models(is_filtered: Callable[[type[Model]], bool]) -> None:
     from sentry.models.apigrant import ApiGrant
     from sentry.models.apitoken import ApiToken
 
@@ -336,7 +339,7 @@ def delete_api_models(is_filtered) -> None:
             queryset.delete()
 
 
-def exported_data(is_filtered, silent) -> None:
+def exported_data(is_filtered: Callable[[type[Model]], bool], silent: bool) -> None:
     from sentry.data_export.models import ExportedData
 
     if not silent:
@@ -350,7 +353,7 @@ def exported_data(is_filtered, silent) -> None:
             item.delete_file()
 
 
-def models_which_use_deletions_code_path() -> list:
+def models_which_use_deletions_code_path() -> list[tuple[type[Model], str, str]]:
     from sentry.models.artifactbundle import ArtifactBundle
     from sentry.models.eventattachment import EventAttachment
     from sentry.models.grouprulestatus import GroupRuleStatus
@@ -368,7 +371,9 @@ def models_which_use_deletions_code_path() -> list:
     ]
 
 
-def remove_cross_project_models(deletes) -> None:
+def remove_cross_project_models(
+    deletes: list[tuple[type[Model], str, str]]
+) -> list[tuple[type[Model], str, str]]:
     from sentry.models.artifactbundle import ArtifactBundle
 
     # These models span across projects, so let's skip them
@@ -376,7 +381,7 @@ def remove_cross_project_models(deletes) -> None:
     return deletes
 
 
-def get_project_id_or_fail(project) -> int | None:
+def get_project_id_or_fail(project: str) -> int:
     click.echo("Bulk NodeStore deletion not available for project selection", err=True)
     project_id = get_project(project)
     if project_id is None:
@@ -385,7 +390,7 @@ def get_project_id_or_fail(project) -> int | None:
     return project_id
 
 
-def remove_old_nodestore_values(days) -> None:
+def remove_old_nodestore_values(days: int) -> None:
     from sentry import nodestore
 
     debug_output("Removing old NodeStore values")
@@ -397,7 +402,7 @@ def remove_old_nodestore_values(days) -> None:
         click.echo("NodeStore backend does not support cleanup operation", err=True)
 
 
-def generate_bulk_query_deletes() -> list:
+def generate_bulk_query_deletes() -> list[tuple[type[Model], str, str | None]]:
     from django.apps import apps
 
     from sentry.models.groupemailthread import GroupEmailThread
@@ -423,7 +428,13 @@ def generate_bulk_query_deletes() -> list:
     return BULK_QUERY_DELETES
 
 
-def run_bulk_query_deletes(bulk_query_deletes, is_filtered, days, project, project_id) -> None:
+def run_bulk_query_deletes(
+    bulk_query_deletes: list[tuple[type[Model], str, str | None]],
+    is_filtered: Callable[[type[Model]], bool],
+    days: int,
+    project: str | None,
+    project_id: int | None,
+) -> None:
     from sentry.db.deletion import BulkDeleteQuery
 
     debug_output("Running bulk query deletes in bulk_query_deletes")
@@ -443,9 +454,13 @@ def run_bulk_query_deletes(bulk_query_deletes, is_filtered, days, project, proje
             ).execute(chunk_size=chunk_size)
 
 
-def prepare_deletes_by_project(project, project_id, is_filtered) -> tuple[list, list]:
-    from sentry import models
+def prepare_deletes_by_project(
+    project: str | None, project_id: int | None, is_filtered: Callable[[type[Model]], bool]
+) -> tuple[QuerySet[Any] | None, list[tuple[Any, str, str]]]:
     from sentry.constants import ObjectStatus
+    from sentry.models.debugfile import ProjectDebugFile
+    from sentry.models.group import Group
+    from sentry.models.project import Project
 
     # Deletions that we run per project. In some cases we can't use an index on just the date
     # column, so as an alternative we use `(project_id, <date_col>)` instead
@@ -453,16 +468,16 @@ def prepare_deletes_by_project(project, project_id, is_filtered) -> tuple[list, 
         # Having an index on `last_seen` sometimes caused the planner to make a bad plan that
         # used this index instead of a more appropriate one. This was causing a lot of postgres
         # load, so we had to remove it.
-        (models.Group, "last_seen", "last_seen"),
-        (models.ProjectDebugFile, "date_accessed", "date_accessed"),
+        (Group, "last_seen", "last_seen"),
+        (ProjectDebugFile, "date_accessed", "date_accessed"),
     ]
     project_deletion_query = None
     to_delete_by_project = []
     if SiloMode.get_current_mode() != SiloMode.CONTROL:
         debug_output("Preparing DELETES_BY_PROJECT context")
-        project_deletion_query = models.Project.objects.filter(status=ObjectStatus.ACTIVE)
+        project_deletion_query = Project.objects.filter(status=ObjectStatus.ACTIVE)
         if project:
-            project_deletion_query = models.Project.objects.filter(id=project_id)
+            project_deletion_query = Project.objects.filter(id=project_id)
 
         for model_tp_tup in DELETES_BY_PROJECT:
             if is_filtered(model_tp_tup[0]):
@@ -473,7 +488,7 @@ def prepare_deletes_by_project(project, project_id, is_filtered) -> tuple[list, 
     return project_deletion_query, to_delete_by_project
 
 
-def remove_file_blobs(is_filtered, silent) -> None:
+def remove_file_blobs(is_filtered: Callable[[type[Model]], bool], silent: bool) -> None:
     from sentry.models.file import FileBlob
 
     # Clean up FileBlob instances which are no longer used and aren't super
